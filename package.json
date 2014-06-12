@@ -1,0 +1,22 @@
+{
+  "name": "docker-router",
+  "version": "0.0.1",
+  "description": "Simple router used in conjunction with Docker containers.",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "author": "Mike Holly <mikejholly@gmail.com>",
+  "license": "ISC",
+  "devDependencies": {
+    "should": "^4.0.1",
+    "mocha": "^1.20.1"
+  },
+  "dependencies": {
+    "redis": "^0.10.3",
+    "async": "^0.9.0",
+    "lodash": "^2.4.1",
+    "bouncy": "^3.2.1",
+    "prettyjson": "^1.0.0"
+  }
+}
