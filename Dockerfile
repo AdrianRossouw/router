@@ -9,4 +9,4 @@ ADD . /app
 WORKDIR /app
 EXPOSE 80
 ENV PORT 80
-ENTRYPOINT sudo supervisor index.js
+ENTRYPOINT supervisor index.js

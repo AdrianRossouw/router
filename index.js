@@ -11,24 +11,16 @@ var HOSTS     = {};
 var ENVS      = {};
 var UNHEALTHY = {};
 
-var redisClient = redis.createClient();
+require('http').globalAgent.maxSockets = Infinity;
+
+var redisClient = redis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST);
 
 function loadRoutingForDomain(domain, fn) {
-  redisClient.smembers(domain + ':hosts', function (err, domains) {
-    if (err) {
-      return fn(err);
-    }
-    fn(null, domains);
-  });
+  redisClient.smembers(domain + ':hosts', fn);
 }
 
 function loadDomains(fn) {
-  redisClient.smembers('domains', function (err, domains) {
-    if (err) {
-      return fn(err);
-    }
-    fn(null, domains);
-  });
+  redisClient.smembers('domains', fn);
 }
 
 function initRoutingTable(fn) {
@@ -84,26 +76,21 @@ var server = bouncy(function(req, res, bounce) {
 });
 
 server.listen(PORT, function() {
-  initRoutingTable(function(err, hosts) {
-    if (err) {
-      console.error(err);
-    }
-  });
-  process.exit(1);
+  console.log('Listening on ' + PORT);
 });
 
-// TODO could use pubsub here (listen for host changes)
+// TODO could use pubsub here (to listen for host changes)
 setInterval(function() {
   // TODO health checks - /ping endpoint?
   initRoutingTable(function(err, hosts) {
     if (err) {
       console.error(err);
     }
-    console.log(prettyjson.render(hosts));
+    console.log(prettyjson.render(hosts) + "\n");
   });
 }, 1000);
 
 process.on('uncaughtException', function(err) {
-  console.log('Caught exception: ' + err);
+  console.log('Caught exception: ' + err, err.stack);
   process.exit(1);
 });
