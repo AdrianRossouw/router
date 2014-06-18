@@ -51,6 +51,12 @@ var server = bouncy(function(req, res, bounce) {
 
   var host = req.headers.host;
 
+  if (req.url == '/ping') {
+    res.statusCode = 200;
+    res.end('pong');
+    return;
+  }
+
   if (!host) {
     res.statusCode = 400;
     res.end('Invalid hostname');
@@ -88,7 +94,7 @@ setInterval(function() {
     }
     console.log(prettyjson.render(hosts) + "\n");
   });
-}, 1000);
+}, 2000);
 
 process.on('uncaughtException', function(err) {
   console.log('Caught exception: ' + err, err.stack);
