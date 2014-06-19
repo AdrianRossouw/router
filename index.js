@@ -37,20 +37,13 @@ function initRoutingTable(fn) {
       });
     }, function(err, results) {
       if (err) {
+        console.error(err);
         return fn(err);
       }
+
+      console.log(prettyjson.render(hosts) + "\n");
       fn(null, HOSTS);
     });
-  });
-}
-
-function runInitRoutingTable() {
-  // TODO health checks - /ping endpoint?
-  initRoutingTable(function(err, hosts) {
-    if (err) {
-      console.error(err);
-    }
-    console.log(prettyjson.render(hosts) + "\n");
   });
 }
 
@@ -91,15 +84,15 @@ server.listen(PORT, function() {
 });
 
 
-redisSubscriber.on("message", function(channel, message) {
-  if (channel == "updates") {
-    runInitRoutingTable();
+redisSubscriber.on('message', function(channel, message) {
+  if (channel == 'updates') {
+    initRoutingTable();
   }
 });
 
-redisSubscriber.subscribe("updates");
+redisSubscriber.subscribe('updates');
 
-runInitRoutingTable();
+initRoutingTable();
 
 process.on('uncaughtException', function(err) {
   console.log('Caught exception: ' + err, err.stack);
