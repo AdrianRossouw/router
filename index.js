@@ -14,6 +14,7 @@ var UNHEALTHY = {};
 require('http').globalAgent.maxSockets = Infinity;
 
 var redisClient = redis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST);
+var redisSubscriber = redis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST);
 
 function loadRoutingForDomain(domain, fn) {
   redisClient.smembers(domain + ':hosts', fn);
@@ -40,6 +41,16 @@ function initRoutingTable(fn) {
       }
       fn(null, HOSTS);
     });
+  });
+}
+
+function runInitRoutingTable() {
+  // TODO health checks - /ping endpoint?
+  initRoutingTable(function(err, hosts) {
+    if (err) {
+      console.error(err);
+    }
+    console.log(prettyjson.render(hosts) + "\n");
   });
 }
 
@@ -79,16 +90,16 @@ server.listen(PORT, function() {
   console.log('Listening on ' + PORT);
 });
 
-// TODO could use pubsub here (to listen for host changes)
-setInterval(function() {
-  // TODO health checks - /ping endpoint?
-  initRoutingTable(function(err, hosts) {
-    if (err) {
-      console.error(err);
-    }
-    console.log(prettyjson.render(hosts) + "\n");
-  });
-}, 1000);
+
+redisSubscriber.on("message", function(channel, message) {
+  if (channel == "updates") {
+    runInitRoutingTable();
+  }
+});
+
+redisSubscriber.subscribe("updates");
+
+runInitRoutingTable();
 
 process.on('uncaughtException', function(err) {
   console.log('Caught exception: ' + err, err.stack);
