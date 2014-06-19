@@ -9,7 +9,7 @@ var _          = require('lodash');
 var PORT      = process.env.PORT || 3000;
 var HOSTS     = {};
 var ENVS      = {};
-var UNHEALTHY = {};
+var UNHEALTHY = [];
 
 require('http').globalAgent.maxSockets = Infinity;
 
@@ -48,7 +48,7 @@ function initRoutingTable(fn) {
 }
 
 function selectHost(table, domain) {
-  return _.sample(table[domain]);
+  return _(table[domain]).difference(UNHEALTHY).sample();
 }
 
 var server = bouncy(function(req, res, bounce) {
@@ -74,6 +74,14 @@ var server = bouncy(function(req, res, bounce) {
   }
 
   var randomHost = selectHost(HOSTS, host);
+
+  if (!randomHost) {
+    res.statusCode = 503;
+    res.end('No available backend for ' + host);
+    return;
+  }
+
+
   var parts = url.parse('http://' + randomHost);
 
   bounce(parts.hostname, parts.port);
@@ -93,6 +101,38 @@ redisSubscriber.on('message', function(channel, message) {
 redisSubscriber.subscribe('updates');
 
 initRoutingTable();
+
+function markHostDown(host) {
+  console.log('Host down: ' + host);
+  if (!_.contains(UNHEALTHY, host)) {
+    UNHEALTHY.push(host);
+  }
+}
+
+function markHostUp(host) {
+  console.log('Host Up: ' + host);
+  _.pull(UNHEALTHY, host);
+}
+
+setInterval(function() {
+  var hosts = _(HOSTS).values().flatten().value();
+
+  async.eachLimit(hosts, 5, function(host, fn) {
+    http.get('http://' + host + '/ping', function(res) {
+      if (res.statusCode == 200) {
+        markHostUp(host);
+      } else {
+        markHostDown(host);
+      }
+      fn();
+    }).on('error', function(err) {
+      markHostDown(host);
+      fn();
+    });
+  });
+
+}, 10000);
+
 
 process.on('uncaughtException', function(err) {
   console.log('Caught exception: ' + err, err.stack);
