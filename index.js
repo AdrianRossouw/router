@@ -9,7 +9,7 @@ var _          = require('lodash');
 var PORT      = process.env.PORT || 3000;
 var HOSTS     = {};
 var ENVS      = {};
-var UNHEALTHY = [];
+var UNHEALTHY = {};
 
 require('http').globalAgent.maxSockets = Infinity;
 
@@ -25,6 +25,7 @@ function loadDomains(fn) {
 }
 
 function initRoutingTable(fn) {
+  fn = fn || function(){};
   console.log('Reloading routing table');
   loadDomains(function(err, domains) {
     async.map(domains, function(domain, fn) {
@@ -41,14 +42,14 @@ function initRoutingTable(fn) {
         return fn(err);
       }
 
-      console.log(prettyjson.render(hosts) + "\n");
+      console.log(prettyjson.render(HOSTS) + "\n");
       fn(null, HOSTS);
     });
   });
 }
 
 function selectHost(table, domain) {
-  return _(table[domain]).difference(UNHEALTHY).sample();
+  return _(table[domain]).difference(Object.keys(UNHEALTHY)).sample();
 }
 
 var server = bouncy(function(req, res, bounce) {
@@ -120,13 +121,13 @@ setInterval(function() {
   async.eachLimit(hosts, 5, function(host, fn) {
     http.get('http://' + host + '/ping', function(res) {
       if (res.statusCode == 200) {
-        markHostUp(host);
+        delete UNHEALTHY[host];
       } else {
-        markHostDown(host);
+        UNHEALTHY[host] = 1;
       }
       fn();
     }).on('error', function(err) {
-      markHostDown(host);
+      UNHEALTHY[host] = 1;
       fn();
     });
   });
