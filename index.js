@@ -25,6 +25,7 @@ function loadDomains(fn) {
 }
 
 function initRoutingTable(fn) {
+  fn = fn || function(){};
   console.log('Reloading routing table');
   loadDomains(function(err, domains) {
     async.map(domains, function(domain, fn) {
@@ -41,14 +42,14 @@ function initRoutingTable(fn) {
         return fn(err);
       }
 
-      console.log(prettyjson.render(hosts) + "\n");
+      console.log(prettyjson.render(HOSTS) + "\n");
       fn(null, HOSTS);
     });
   });
 }
 
 function selectHost(table, domain) {
-  return _.sample(table[domain]);
+  return _(table[domain]).difference(Object.keys(UNHEALTHY)).sample();
 }
 
 var server = bouncy(function(req, res, bounce) {
@@ -74,6 +75,14 @@ var server = bouncy(function(req, res, bounce) {
   }
 
   var randomHost = selectHost(HOSTS, host);
+
+  if (!randomHost) {
+    res.statusCode = 503;
+    res.end('No available backend for ' + host);
+    return;
+  }
+
+
   var parts = url.parse('http://' + randomHost);
 
   bounce(parts.hostname, parts.port);
@@ -93,6 +102,38 @@ redisSubscriber.on('message', function(channel, message) {
 redisSubscriber.subscribe('updates');
 
 initRoutingTable();
+
+function markHostDown(host) {
+  console.log('Host down: ' + host);
+  if (!_.contains(UNHEALTHY, host)) {
+    UNHEALTHY.push(host);
+  }
+}
+
+function markHostUp(host) {
+  console.log('Host Up: ' + host);
+  _.pull(UNHEALTHY, host);
+}
+
+setInterval(function() {
+  var hosts = _(HOSTS).values().flatten().value();
+
+  async.eachLimit(hosts, 5, function(host, fn) {
+    http.get('http://' + host + '/ping', function(res) {
+      if (res.statusCode == 200) {
+        delete UNHEALTHY[host];
+      } else {
+        UNHEALTHY[host] = 1;
+      }
+      fn();
+    }).on('error', function(err) {
+      UNHEALTHY[host] = 1;
+      fn();
+    });
+  });
+
+}, 10000);
+
 
 process.on('uncaughtException', function(err) {
   console.log('Caught exception: ' + err, err.stack);
