@@ -40,6 +40,7 @@ function markHostHealth(host, healthy) {
   if (healthy) {
     delete UNHEALTHY[host];
   } else {
+    console.log(('Could not reach ' + host).red);
     UNHEALTHY[host] = 1;
   }
 }
