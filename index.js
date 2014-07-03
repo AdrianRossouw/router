@@ -11,7 +11,7 @@ var INSTANCES = {};
 var ENVS      = {};
 var UNHEALTHY = {};
 
-require('http').globalAgent.maxSockets = Infinity;
+http.globalAgent.maxSockets = Infinity;
 
 function createRedisClient() {
   return redis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST);
