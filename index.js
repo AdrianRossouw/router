@@ -2,7 +2,7 @@ var redis      = require('redis');
 var async      = require('async');
 var request    = require('request');
 var url        = require('url');
-var bouncy     = require('bouncy');
+var http       = require('http');
 var prettyjson = require('prettyjson');
 var _          = require('lodash');
 
@@ -106,7 +106,7 @@ function selectAppInstance(app) {
   return _(INSTANCES[app]).difference(Object.keys(UNHEALTHY)).sample();
 }
 
-var server = bouncy(function(req, res, bounce) {
+var server = http.createServer(function(req, res) {
 
   var app = req.headers.host;
 
@@ -142,8 +142,29 @@ var server = bouncy(function(req, res, bounce) {
     return;
   }
 
+  console.log(req.headers.host + req.url + ' -> ' + randomInstance + req.url);
+
   var parts = randomInstance.split(':');
-  bounce(parts[0], parts[1]);
+  var options = {
+    hostname: parts[0],
+    port: parts[1],
+    method: req.method,
+    path: req.url,
+    headers: req.headers,
+  };
+
+  console.log(options)
+
+  var proxy = http.request(options, function(_res) {
+    _res.pipe(res, {
+      end: true,
+    });
+  });
+
+  req.pipe(proxy, {
+    end: true,
+  });
+
 });
 
 server.listen(PORT, function() {
