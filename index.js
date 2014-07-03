@@ -153,10 +153,9 @@ var server = http.createServer(function(req, res) {
     headers: req.headers,
   };
 
-  console.log(options)
-
-  var proxy = http.request(options, function(_res) {
-    _res.pipe(res, {
+  var proxy = http.request(options, function(proxyRes) {
+    res.writeHead(proxyRes.statusCode, proxyRes.headers);
+    proxyRes.pipe(res, {
       end: true,
     });
   });
