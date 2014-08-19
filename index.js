@@ -108,7 +108,8 @@ function selectAppInstance(app) {
 
 var server = http.createServer(function(req, res) {
 
-  var app = req.headers.host;
+  // Allow to run locally on a different port than 80.
+  var app = req.headers.host.split(':')[0];
 
   if (req.url == '/ping') {
     res.statusCode = 200;
