@@ -8,7 +8,7 @@ A simple health-check is used to account for failed appliation instances. All ap
 
 ## Start a Router
 
-Just run `sudo docker.io run -e REDIS_HOST=$REDIS_HOST_IP -e REDIS_PORT=6379 longshoreman/router` on your router nodes to start directing traffic to your Docker application instances. `$REDIS_HOST_IP` is the IP address of your Redis database.
+Just run `sudo docker run -p 80:80 -d -e REDIS_HOST=$REDIS_HOST_IP -e REDIS_PORT=6379 longshoreman/router` on your router nodes to start directing traffic to your Docker application instances. `$REDIS_HOST_IP` is the IP address of your Redis instance.
 
 ### TODO
 
