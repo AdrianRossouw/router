@@ -52,6 +52,15 @@ function subscribeToUpdates() {
       initRoutingTable();
     }
   });
+  client.on('error', function(err) {
+    console.log('Redis PubSub connection error. Aborting.');
+    console.log(err);
+    process.exit(1);
+  });
+  client.on('end', function() {
+    console.log('Redis PubSub connection closed. Aborting.');
+    process.exit(1);
+  });
   client.subscribe('updates');
 }
 
@@ -82,6 +91,9 @@ function healthCheckInstances(fn) {
 function initRoutingTable(fn) {
   fn = fn || _.noop;
   loadApps(function(err, apps) {
+    if (err) {
+      return fn(err);
+    }
     async.map(apps, function(app, fn) {
       loadAppInstances(app, function(err, instances) {
         if (err) {
@@ -142,8 +154,6 @@ var server = http.createServer(function(req, res) {
     res.end('No available backend for ' + app);
     return;
   }
-
-  console.log(req.headers.host + req.url + ' -> ' + randomInstance + req.url);
 
   var parts = randomInstance.split(':');
   var options = {
