@@ -127,7 +127,7 @@ var server = http.createServer(function(req, res) {
   // Allow to run locally on a different port than 80.
   var app = req.headers.host.split(':')[0];
 
-  if (req.url == '/ping') {
+  if (req.url == '/_ping') {
     res.statusCode = 200;
     res.end('pong');
     return;
