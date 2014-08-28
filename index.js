@@ -14,7 +14,20 @@ var UNHEALTHY = {};
 http.globalAgent.maxSockets = Infinity;
 
 function createRedisClient() {
-  return redis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST);
+  var client = redis.createClient(process.env.REDIS_PORT, process.env.REDIS_HOST);
+
+  client.on('error', function(err) {
+    console.log('Redis connection error. Aborting.');
+    console.log(err);
+    process.exit(1);
+  });
+
+  client.on('end', function() {
+    console.log('Redis connection closed. Aborting.');
+    process.exit(1);
+  });
+
+  return client;
 }
 
 function redisCmd() {
@@ -51,15 +64,6 @@ function subscribeToUpdates() {
     if (channel == 'updates') {
       initRoutingTable();
     }
-  });
-  client.on('error', function(err) {
-    console.log('Redis PubSub connection error. Aborting.');
-    console.log(err);
-    process.exit(1);
-  });
-  client.on('end', function() {
-    console.log('Redis PubSub connection closed. Aborting.');
-    process.exit(1);
   });
   client.subscribe('updates');
 }
@@ -123,7 +127,7 @@ var server = http.createServer(function(req, res) {
   // Allow to run locally on a different port than 80.
   var app = req.headers.host.split(':')[0];
 
-  if (req.url == '/ping') {
+  if (req.url == '/_ping') {
     res.statusCode = 200;
     res.end('pong');
     return;
