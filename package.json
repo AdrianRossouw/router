@@ -1,6 +1,6 @@
 {
   "name": "docker-router",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Simple router used in conjunction with Docker containers.",
   "main": "index.js",
   "scripts": {
