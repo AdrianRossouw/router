@@ -1,3 +1,5 @@
+'use strict';
+
 var redis      = require('redis');
 var async      = require('async');
 var request    = require('request');
@@ -45,15 +47,11 @@ function loadApps(fn) {
   redisCmd('smembers', 'apps', fn);
 }
 
-function getAllInstances() {
-  return _(INSTANCES).values().flatten().value();
-}
-
-function markHostHealth(host, healthy) {
+function markHostHealth(app, host, healthy) {
   if (healthy) {
     delete UNHEALTHY[host];
   } else {
-    console.log(('Could not reach ' + host).red);
+    console.log(('[' + app + '] Could not reach ' + host).red);
     UNHEALTHY[host] = 1;
   }
 }
@@ -68,7 +66,7 @@ function subscribeToUpdates() {
   client.subscribe('updates');
 }
 
-function healthCheckHost(host, fn) {
+function healthCheckHost(app, host, fn) {
   request({
     url: 'http://' + host + '/ping',
     timeout: 5000,
@@ -76,19 +74,21 @@ function healthCheckHost(host, fn) {
     if (err) {
       return fn(err);
     }
-    markHostHealth(host, res.statusCode == 200);
+    markHostHealth(app, host, res.statusCode == 200);
     fn();
   }).on('error', function(err) {
-    markHostHealth(host, false);
+    markHostHealth(app, host, false);
     fn();
   });
 }
 
 function healthCheckInstances(fn) {
   fn = fn || _.noop;
-  var instances = getAllInstances();
-  async.eachLimit(instances, 5, function(host, fn) {
-    healthCheckHost(host, fn);
+  var apps = Object.keys(INSTANCES);
+  async.each(apps, function(app, fn) {
+    async.eachLimit(INSTANCES[app], 5, function(host, fn) {
+      healthCheckHost(app, host, fn);
+    }, fn);
   }, fn);
 }
 
