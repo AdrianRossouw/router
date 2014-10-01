@@ -175,6 +175,11 @@ var server = http.createServer(function(req, res) {
     });
   });
 
+  proxy.on('error', function(err) {
+    res.writeHead(500, { 'Content-type': 'json' });
+    res.end(JSON.stringify({error: err}));
+  });
+
   req.pipe(proxy, {
     end: true,
   });
